@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAA Project: Recursive Org Chart</title>
+    <style>
+        /* High-end bluish-black dark mode aesthetics */
+        body {
+            margin: 0;
+            padding: 2rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b101e 0%, #1a1528 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: #60a5fa;
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        /* Glassmorphism Containers with high-contrast borders */
+        .panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #93c5fd;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Input Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+
+        td {
+            padding: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #475569;
+            color: #f8fafc;
+            padding: 0.5rem;
+            border-radius: 6px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: #60a5fa;
+        }
+
+        /* Button Styling */
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: 1px solid #60a5fa;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.85rem;
+        }
+
+        .btn:hover {
+            background: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-add {
+            background: transparent;
+            border: 1px dashed #475569;
+            color: #94a3b8;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn-add:hover {
+            border-color: #94a3b8;
+            color: #f8fafc;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Output & Stats Styling */
+        pre {
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            color: #a78bfa;
+            line-height: 1.5;
+            min-height: 200px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Recursive Organization Chart Traversal</h1>
+
+    <div class="grid-container">
+        <div class="panel">
+            <h2>Input Panel (N-ary Tree Data)</h2>
+            <table id="emp-table">
+                <tr>
+                    <td><input type="text" placeholder="Name" value="Alice"></td>
+                    <td><input type="text" placeholder="Role" value="CEO"></td>
+                    <td><input type="text" placeholder="Manager" value="ROOT"></td>
+                </tr>
+                <tr>
+                    <td><input type="text" placeholder="Name" value="Bob"></td>
+                    <td><input type="text" placeholder="Role" value="VP Engineering"></td>
+                    <td><input type="text" placeholder="Manager" value="Alice"></td>
+                </tr>
+                <tr>
+                    <td><input type="text" placeholder="Name" value="Grace"></td>
+                    <td><input type="text" placeholder="Role" value="Engineer"></td>
+                    <td><input type="text" placeholder="Manager" value="Bob"></td>
+                </tr>
+            </table>
+
+            <button class="btn btn-add" onclick="addRow()">+ Add Employee Row</button>
+            <button class="btn" style="width: 100%;" onclick="runTraversal()">Run DFS Traversal</button>
+        </div>
+
+        <div class="panel">
+            <h2>Traversal Output & Complexity Stats</h2>
+            <pre id="output">Results will appear here...</pre>
+        </div>
+    </div>
+
+    <script>
+        // UI Logic to add dynamic rows to the input panel
+        function addRow() {
+            const table = document.getElementById("emp-table");
+            const row = table.insertRow();
+            row.innerHTML = `
+                <td><input type="text" placeholder="Name"></td>
+                <td><input type="text" placeholder="Role"></td>
+                <td><input type="text" placeholder="Manager"></td>
+            `;
+        }
+
+        // JS <-> Flask Bridge (Exact PRD Implementation)
+        async function runTraversal() {
+            // 1. Collect rows from the input table
+            const rows = document.querySelectorAll("#emp-table tr");
+            const parts = [];
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll("input");
+                const name = cells[0].value.trim();
+                const role = cells[1].value.trim();
+                const mgr = cells[2].value.trim();
+
+                // Construct the pipe-delimited string
+                if (name && role && mgr) {
+                    parts.push(`${name},${role},${mgr}`);
+                }
+            });
+
+            const inputStr = parts.join(" | ");
+            document.getElementById("output").textContent = "Computing traversal...";
+
+            try {
+                // 2. Call Flask API
+                const res = await fetch("http://localhost:5000/traverse", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ input: inputStr })
+                });
+
+                const data = await res.json();
+
+                // 3. Display result
+                document.getElementById("output").textContent = data.result ?? data.error;
+            } catch (err) {
+                document.getElementById("output").textContent = "Error: Ensure Flask server is running on localhost:5000\n" + err;
+            }
+        }
+    </script>
+</body>
+
+</html>
