@@ -122,7 +122,36 @@
             line-height: 1.5;
             min-height: 200px;
         }
+        /* D3 Tree Styling */
+        #tree-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+
+        .node circle {
+            fill: rgba(15, 23, 42, 0.8);
+            stroke: #60a5fa;
+            stroke-width: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .node text {
+            font-size: 14px;
+            fill: #e2e8f0;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-weight: 500;
+        }
+
+        .link {
+            fill: none;
+            stroke: rgba(148, 163, 184, 0.4);
+            stroke-width: 2px;
+        }
     </style>
+    <!-- D3.js for Data Visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 
 <body>
@@ -160,6 +189,12 @@
         </div>
     </div>
 
+    <!-- Visualization Panel -->
+    <div class="panel" style="margin-top: 1.5rem;">
+        <h2>Tree Visualization (Pre-order DFS)</h2>
+        <div id="tree-container"></div>
+    </div>
+
     <script>
         // UI Logic to add dynamic rows to the input panel
         function addRow() {
@@ -174,6 +209,12 @@
 
         // JS <-> Flask Bridge (Exact PRD Implementation)
         async function runTraversal() {
+            // Build tree data for D3 before executing the flask logic
+            const treeData = buildTreeData();
+            if (treeData) {
+                updateTree(treeData);
+            }
+
             // 1. Collect rows from the input table
             const rows = document.querySelectorAll("#emp-table tr");
             const parts = [];
@@ -193,6 +234,13 @@
             const inputStr = parts.join(" | ");
             document.getElementById("output").textContent = "Computing traversal...";
 
+            // Trigger Animation based on the tree we just built
+            if (treeData) {
+                const rootNode = d3.hierarchy(treeData);
+                // Animate tree traversal without awaiting so that Flask can run in parallel
+                animateTraversal(rootNode);
+            }
+
             try {
                 // 2. Call Flask API
                 const res = await fetch("http://localhost:5000/traverse", {
@@ -209,6 +257,136 @@
                 document.getElementById("output").textContent = "Error: Ensure Flask server is running on localhost:5000\n" + err;
             }
         }
+
+        // --- D3 Visualization Logic ---
+
+        function buildTreeData() {
+            const rows = document.querySelectorAll("#emp-table tr");
+            const employees = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll("input");
+                const name = cells[0].value.trim();
+                const role = cells[1].value.trim();
+                const mgr = cells[2].value.trim();
+                if (name) {
+                    employees.push({ name, role, mgr });
+                }
+            });
+
+            // Find root (manager is ROOT or someone not in list)
+            const root = employees.find(e => e.mgr.toUpperCase() === 'ROOT' || !employees.some(m => m.name === e.mgr));
+            if (!root) return null;
+
+            const buildNode = (emp) => {
+                const children = employees.filter(e => e.mgr === emp.name).map(buildNode);
+                return { name: emp.name, role: emp.role, children: children.length ? children : undefined };
+            };
+
+            return buildNode(root);
+        }
+
+        let svg, treeLayout;
+
+        function updateTree(treeData) {
+            d3.select("#tree-container").selectAll("*").remove();
+            
+            const margin = {top: 40, right: 20, bottom: 40, left: 20};
+            // Dynamic width based on screen and tree size.
+            const width = Math.max(800, window.innerWidth - 200) - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            svg = d3.select("#tree-container").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .style("overflow", "visible")
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+            treeLayout = d3.tree().size([width, height]);
+            
+            const root = d3.hierarchy(treeData);
+            treeLayout(root);
+
+            // Add Links
+            svg.selectAll(".link")
+                .data(root.links())
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkVertical()
+                    .x(function(d) { return d.x; })
+                    .y(function(d) { return d.y; })
+                );
+
+            // Add Nodes
+            const node = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("id", function(d) { return "node-" + d.data.name.replace(/\s+/g, '-'); })
+                .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+
+            // Node Circles
+            node.append("circle")
+                .attr("r", 35);
+
+            // Node Text
+            node.append("text")
+                .attr("dy", "-0.2em")
+                .attr("text-anchor", "middle")
+                .text(function(d) { return d.data.name; });
+                
+            node.append("text")
+                .attr("dy", "1.2em")
+                .attr("text-anchor", "middle")
+                .style("font-size", "11px")
+                .style("fill", "#94a3b8")
+                .text(function(d) { return d.data.role; });
+        }
+
+        function preOrderDFS(node, path = []) {
+            if (!node) return path;
+            path.push(node.data.name);
+            if (node.children) {
+                node.children.forEach(child => preOrderDFS(child, path));
+            }
+            return path;
+        }
+
+        async function animateTraversal(rootNode) {
+            const path = preOrderDFS(rootNode);
+            
+            // Reset node styling before animating
+            d3.selectAll(".node circle")
+                .transition().duration(200)
+                .style("fill", "rgba(15, 23, 42, 0.8)")
+                .style("stroke", "#60a5fa")
+                .style("box-shadow", "none");
+
+            for (let i = 0; i < path.length; i++) {
+                const name = path[i].replace(/\s+/g, '-');
+                const nodeEl = d3.select("#node-" + name + " circle");
+                
+                // Highlight current active node (orange glow)
+                nodeEl.transition().duration(400)
+                      .style("fill", "#f59e0b")
+                      .style("stroke", "#fbbf24")
+                      .attr("r", 40);
+                      
+                await new Promise(r => setTimeout(r, 800));
+                
+                // Set node to visited state (green)
+                nodeEl.transition().duration(400)
+                      .style("fill", "rgba(16, 185, 129, 0.3)")
+                      .style("stroke", "#34d399")
+                      .attr("r", 35);
+            }
+        }
+        
+        // Render initial tree on load
+        window.onload = () => {
+            const treeData = buildTreeData();
+            if(treeData) updateTree(treeData);
+        };
     </script>
 </body>
 
