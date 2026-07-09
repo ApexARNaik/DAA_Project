@@ -17,9 +17,10 @@ def traverse():
     if not inp:
         return jsonify({"error": "Empty input"}), 400
         
-    # Call the C binary using subprocess, passing the input string as argv[1]
+    # Call the C binary using subprocess, passing the input string via stdin
     result = subprocess.run(
-        [BINARY, inp],
+        [BINARY],
+        input=inp,
         capture_output=True, text=True, timeout=5
     )
     

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <windows.h>
 
 #define MAX_CHILDREN 20 
 #define MAX_NAME 64
@@ -71,7 +72,7 @@ Employee* findByName(const char* name) { // Helper for the parser
 }
 
 Employee* parseInput(const char *input) { // 5.4 Input Parser
-    char buf[4096];
+    char buf[100000];
     strncpy(buf, input, sizeof(buf));
     poolSize = 0;
     Employee* root = NULL;
@@ -110,7 +111,7 @@ Employee* parseInput(const char *input) { // 5.4 Input Parser
 }
 
 int main(int argc, char *argv[]) { // 5.5 main() - Entry Point Called by Flask // 5.5 main() - Entry Point Called by Flask
-    char input[4096] = {0};
+    char input[100000] = {0};
     
     if (argc >= 2) { // Flask passes the string as the first argument
         strncpy(input, argv[1], sizeof(input) - 1);
@@ -125,13 +126,17 @@ int main(int argc, char *argv[]) { // 5.5 main() - Entry Point Called by Flask /
     }
 
     emit("ORGANIZATION HIERARCHY\n======================\n");
-    
-    clock_t start_time = clock(); // --- TIMING START ---
+//     clock_t start_time = clock(); // --- TIMING START ---    
+    LARGE_INTEGER start_time, end_time, frequency;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&start_time); // --- TIMING START ---
     
     traverseOrg(root, 0);
-    
-    clock_t end_time = clock(); // --- TIMING END ---
-    double elapsed_ms = ((double)(end_time - start_time) / CLOCKS_PER_SEC) * 1000.0;
+
+//    clock_t end_time = clock(); // --- TIMING END ---
+//    double elapsed_ms = ((double)(end_time - start_time) / CLOCKS_PER_SEC) * 1000.0;    
+    QueryPerformanceCounter(&end_time); // --- TIMING END ---
+    double elapsed_ms = (double)(end_time.QuadPart - start_time.QuadPart) * 1000.0 / frequency.QuadPart;
 
     int n = countNodes(root);
     int h = treeHeight(root);
