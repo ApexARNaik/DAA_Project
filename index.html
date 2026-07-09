@@ -180,6 +180,8 @@
             </table>
 
             <button class="btn btn-add" onclick="addRow()">+ Add Employee Row</button>
+            <input type="file" id="fileUpload" accept=".csv,.txt" style="display: none;" onchange="handleFileUpload(event)">
+            <button class="btn btn-add" onclick="document.getElementById('fileUpload').click()">📁 Upload CSV/TXT File</button>
             <button class="btn" style="width: 100%;" onclick="runTraversal()">Run DFS Traversal</button>
         </div>
 
@@ -205,6 +207,47 @@
                 <td><input type="text" placeholder="Role"></td>
                 <td><input type="text" placeholder="Manager"></td>
             `;
+        }
+
+        // Logic to handle CSV file upload
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                
+                const table = document.getElementById("emp-table");
+                table.innerHTML = ""; // Clear existing rows
+
+                lines.forEach(line => {
+                    const cleanLine = line.trim();
+                    if (!cleanLine) return;
+                    
+                    // Basic split by comma (can handle CSV formats)
+                    // If your file has '|' as separator, change the split character
+                    let parts = cleanLine.split(','); 
+                    if (parts.length < 3) parts = cleanLine.split('|'); // Fallback to pipe
+
+                    if (parts.length >= 3) {
+                        const row = table.insertRow();
+                        row.innerHTML = `
+                            <td><input type="text" placeholder="Name" value="${parts[0].trim()}"></td>
+                            <td><input type="text" placeholder="Role" value="${parts[1].trim()}"></td>
+                            <td><input type="text" placeholder="Manager" value="${parts[2].trim()}"></td>
+                        `;
+                    }
+                });
+
+                // Re-build tree data immediately after uploading
+                const treeData = buildTreeData();
+                if(treeData) updateTree(treeData);
+            };
+            reader.readAsText(file);
+            // Reset input so the same file can be uploaded again if needed
+            event.target.value = "";
         }
 
         // JS <-> Flask Bridge (Exact PRD Implementation)
@@ -290,10 +333,14 @@
         function updateTree(treeData) {
             d3.select("#tree-container").selectAll("*").remove();
             
-            const margin = {top: 40, right: 20, bottom: 40, left: 20};
-            // Dynamic width based on screen and tree size.
-            const width = Math.max(800, window.innerWidth - 200) - margin.left - margin.right;
-            const height = 400 - margin.top - margin.bottom;
+            const margin = {top: 50, right: 60, bottom: 50, left: 60};
+            const height = 450 - margin.top - margin.bottom;
+            
+            const root = d3.hierarchy(treeData);
+            
+            // Dynamic width based on number of leaf nodes to prevent overlap
+            const minWidth = root.leaves().length * 130; // Increased spacing slightly
+            const width = Math.max(minWidth, window.innerWidth - 100) - margin.left - margin.right;
 
             svg = d3.select("#tree-container").append("svg")
                 .attr("width", width + margin.left + margin.right)
@@ -303,8 +350,6 @@
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
                 
             treeLayout = d3.tree().size([width, height]);
-            
-            const root = d3.hierarchy(treeData);
             treeLayout(root);
 
             // Add Links
@@ -327,20 +372,30 @@
 
             // Node Circles
             node.append("circle")
-                .attr("r", 35);
+                .attr("r", 45); // Increased from 35
 
-            // Node Text
+            // Node Text (Name)
             node.append("text")
-                .attr("dy", "-0.2em")
+                .attr("dy", "-0.5em")
                 .attr("text-anchor", "middle")
                 .text(function(d) { return d.data.name; });
                 
+            // Node Text (Role - Multi-line wrapping)
             node.append("text")
-                .attr("dy", "1.2em")
                 .attr("text-anchor", "middle")
                 .style("font-size", "11px")
                 .style("fill", "#94a3b8")
-                .text(function(d) { return d.data.role; });
+                .each(function(d) {
+                    const el = d3.select(this);
+                    const words = d.data.role ? d.data.role.split(/\s+/) : [];
+                    let initialDy = 1.0;
+                    words.forEach((word, i) => {
+                        el.append("tspan")
+                          .attr("x", 0)
+                          .attr("dy", i === 0 ? initialDy + "em" : "1.1em")
+                          .text(word);
+                    });
+                });
         }
 
         function preOrderDFS(node, path = []) {
@@ -370,7 +425,7 @@
                 nodeEl.transition().duration(400)
                       .style("fill", "#f59e0b")
                       .style("stroke", "#fbbf24")
-                      .attr("r", 40);
+                      .attr("r", 50); // Increased glow size
                       
                 await new Promise(r => setTimeout(r, 800));
                 
@@ -378,7 +433,7 @@
                 nodeEl.transition().duration(400)
                       .style("fill", "rgba(16, 185, 129, 0.3)")
                       .style("stroke", "#34d399")
-                      .attr("r", 35);
+                      .attr("r", 45); // Restore to new base size
             }
         }
         
