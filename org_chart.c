@@ -3,7 +3,7 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_CHILDREN 20 // Constants as defined in the PRD
+#define MAX_CHILDREN 20 
 #define MAX_NAME 64
 #define MAX_EMPLOYEES 100
 #define OUT_BUF_SIZE 8192
