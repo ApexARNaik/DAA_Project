@@ -5,8 +5,8 @@
 
 #define MAX_CHILDREN 20 
 #define MAX_NAME 64
-#define MAX_EMPLOYEES 100
-#define OUT_BUF_SIZE 8192
+#define MAX_EMPLOYEES 1100
+#define OUT_BUF_SIZE 100000
 
 typedef struct Employee { // Employee Node (N-ary Tree Node)
     char name[MAX_NAME];
