@@ -125,9 +125,9 @@
         /* D3 Tree Styling */
         #tree-container {
             width: 100%;
-            display: flex;
-            justify-content: center;
-            overflow-x: auto;
+            max-height: 75vh;
+            display: block; /* Removed flex center to prevent left-side truncation on overflow */
+            overflow: auto;
         }
 
         .node circle {
@@ -161,23 +161,28 @@
     <div class="grid-container">
         <div class="panel">
             <h2>Input Panel (N-ary Tree Data)</h2>
-            <table id="emp-table">
-                <tr>
-                    <td><input type="text" placeholder="Name" value="Alice"></td>
-                    <td><input type="text" placeholder="Role" value="CEO"></td>
-                    <td><input type="text" placeholder="Manager" value="ROOT"></td>
-                </tr>
-                <tr>
-                    <td><input type="text" placeholder="Name" value="Bob"></td>
-                    <td><input type="text" placeholder="Role" value="VP Engineering"></td>
-                    <td><input type="text" placeholder="Manager" value="Alice"></td>
-                </tr>
-                <tr>
-                    <td><input type="text" placeholder="Name" value="Grace"></td>
-                    <td><input type="text" placeholder="Role" value="Engineer"></td>
-                    <td><input type="text" placeholder="Manager" value="Bob"></td>
-                </tr>
-            </table>
+            <details style="margin-bottom: 1rem;">
+                <summary style="cursor: pointer; color: #93c5fd; font-weight: bold; margin-bottom: 0.5rem;">View / Edit Employees List</summary>
+                <div style="max-height: 250px; overflow-y: auto; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px; padding: 0.5rem; background: rgba(15, 23, 42, 0.3);">
+                    <table id="emp-table">
+                        <tr>
+                            <td><input type="text" placeholder="Name" value="Alice"></td>
+                            <td><input type="text" placeholder="Role" value="CEO"></td>
+                            <td><input type="text" placeholder="Manager" value="ROOT"></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" placeholder="Name" value="Bob"></td>
+                            <td><input type="text" placeholder="Role" value="VP Engineering"></td>
+                            <td><input type="text" placeholder="Manager" value="Alice"></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" placeholder="Name" value="Grace"></td>
+                            <td><input type="text" placeholder="Role" value="Engineer"></td>
+                            <td><input type="text" placeholder="Manager" value="Bob"></td>
+                        </tr>
+                    </table>
+                </div>
+            </details>
 
             <button class="btn btn-add" onclick="addRow()">+ Add Employee Row</button>
             <input type="file" id="fileUpload" accept=".csv,.txt" style="display: none;" onchange="handleFileUpload(event)">
@@ -186,8 +191,10 @@
         </div>
 
         <div class="panel">
-            <h2>Traversal Output & Complexity Stats</h2>
-            <pre id="output">Results will appear here...</pre>
+            <details open>
+                <summary style="cursor: pointer; color: #93c5fd; font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid rgba(148, 163, 184, 0.2); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">Traversal Output & Complexity Stats</summary>
+                <pre id="output">Results will appear here...</pre>
+            </details>
         </div>
     </div>
 
@@ -244,6 +251,9 @@
                 // Re-build tree data immediately after uploading
                 const treeData = buildTreeData();
                 if(treeData) updateTree(treeData);
+                
+                // Automatically collapse the details view for large uploads to save space
+                document.querySelector("details").removeAttribute("open");
             };
             reader.readAsText(file);
             // Reset input so the same file can be uploaded again if needed
@@ -334,9 +344,13 @@
             d3.select("#tree-container").selectAll("*").remove();
             
             const margin = {top: 50, right: 60, bottom: 50, left: 60};
-            const height = 450 - margin.top - margin.bottom;
             
             const root = d3.hierarchy(treeData);
+            
+            // Dynamic height based on tree depth
+            const depth = d3.max(root.descendants(), d => d.depth) || 1;
+            const minHeight = depth * 160; // 160px vertical spacing per level
+            const height = Math.max(minHeight, 450) - margin.top - margin.bottom;
             
             // Dynamic width based on number of leaf nodes to prevent overlap
             const minWidth = root.leaves().length * 130; // Increased spacing slightly
