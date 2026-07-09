@@ -200,7 +200,10 @@
 
     <!-- Visualization Panel -->
     <div class="panel" style="margin-top: 1.5rem;">
-        <h2>Tree Visualization (Pre-order DFS)</h2>
+        <h2 style="display: flex; justify-content: space-between; align-items: center;">
+            Tree Visualization (Pre-order DFS)
+            <button class="btn" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="downloadJPEG()">Export as JPEG</button>
+        </h2>
         <div id="tree-container"></div>
     </div>
 
@@ -371,6 +374,9 @@
                 .data(root.links())
                 .enter().append("path")
                 .attr("class", "link")
+                .attr("fill", "none")
+                .attr("stroke", "rgba(148, 163, 184, 0.4)")
+                .attr("stroke-width", "2px")
                 .attr("d", d3.linkVertical()
                     .x(function(d) { return d.x; })
                     .y(function(d) { return d.y; })
@@ -386,12 +392,18 @@
 
             // Node Circles
             node.append("circle")
-                .attr("r", 45); // Increased from 35
+                .attr("r", 45) // Increased from 35
+                .attr("fill", "rgba(15, 23, 42, 0.8)")
+                .attr("stroke", "#60a5fa")
+                .attr("stroke-width", "3px");
 
             // Node Text (Name)
             node.append("text")
                 .attr("dy", "-0.5em")
                 .attr("text-anchor", "middle")
+                .attr("fill", "#e2e8f0")
+                .style("font-size", "14px")
+                .style("font-weight", "500")
                 .text(function(d) { return d.data.name; });
                 
             // Node Text (Role - Multi-line wrapping)
@@ -456,6 +468,50 @@
             const treeData = buildTreeData();
             if(treeData) updateTree(treeData);
         };
+
+        // Export SVG to JPEG
+        function downloadJPEG() {
+            const svgNode = document.querySelector("#tree-container svg");
+            if (!svgNode) {
+                alert("No tree to export! Run the traversal first.");
+                return;
+            }
+
+            const svgClone = svgNode.cloneNode(true);
+            const width = parseInt(svgClone.getAttribute("width"));
+            const height = parseInt(svgClone.getAttribute("height"));
+
+            // Inject dark background matching the theme
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("width", "100%");
+            rect.setAttribute("height", "100%");
+            rect.setAttribute("fill", "#0b101e"); 
+            svgClone.insertBefore(rect, svgClone.firstChild);
+
+            const svgData = new XMLSerializer().serializeToString(svgClone);
+            const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+            const url = URL.createObjectURL(svgBlob);
+            
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                
+                const jpegUrl = canvas.toDataURL("image/jpeg", 0.95);
+                
+                const a = document.createElement("a");
+                a.download = "org_chart.jpg";
+                a.href = jpegUrl;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+            img.src = url;
+        }
     </script>
 </body>
 

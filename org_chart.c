@@ -34,7 +34,8 @@ void traverseOrg(Employee* emp, int level) { // 5.2 Core Recursive Traversal Fun
     if (emp == NULL) return; /* BASE CASE */
 
     char indent[256] = {0};
-    for (int i = 0; i < level; i++) strcat(indent, "    ");
+    for (int i = 0; i < level; i++) 
+        strcat(indent, "    ");
 
     char line[512];
     snprintf(line, sizeof(line), "%s- %s (%s)\n", indent, emp->name, emp->role);
